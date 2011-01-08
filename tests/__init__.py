@@ -121,10 +121,7 @@ class IRCTestCase(AsyncTestCase):
 
         @contextlib.contextmanager
         def _raiser_context():
-            try:
-                yield
-            except:
-                raise
+            yield
 
         with StackContext(_raiser_context):
             self.server = IRCTestServer(self.io_loop, self._tester)
