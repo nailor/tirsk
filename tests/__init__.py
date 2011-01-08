@@ -80,7 +80,7 @@ class IRCConnection(object):
         self.stream.close()
 
     def _cmd_received(self, data):
-        def _process_finish(self):
+        def _process_finish():
             if do_finish:
                 self.finish()
             else:
@@ -106,7 +106,32 @@ class IRCTestCase(AsyncTestCase):
         return self.assertEqual(a, b)
 
     def get_tester(self):
-        raise NotImplementedError()
+        # This returns default tester that verifies input agains
+        # self._exchange, set by @exchange decorator.
+        #
+        # Usage is somewhat like this, note that CR-LF should be omitted:
+        #
+        # @exchange(('NICK bot', 'OK), ('OTHERCMD', 'REPLY'))
+        # def test_something(self):
+        #     do_some_testing()
+        #
+        # This also verifies that the commands arrive at the specified
+        # order
+        def exchangetester(data):
+            assert self._exchange
+            cur = self._exchange[0]
+            self._exchange = self._exchange[1:]
+
+            self.eq(data, cur[0] + '\r\n')
+
+            # By returning `not self._exchange` as second item in
+            # tuple, we ensure that the connection is closed when the
+            # server has no further things to say.
+            if not self._exchange:
+                self.stop()
+
+            return (cur[1] + '\r\n', not self._exchange)
+        return exchangetester
 
     # Don't override these. setUp and tearDown are just convenience
     # wrappers so that the classes subclassing IRCTestCase do not need
@@ -117,6 +142,7 @@ class IRCTestCase(AsyncTestCase):
     def setUp(self):
         super(IRCTestCase, self).setUp()
         self.setup()
+        self._exchange = None
         self._tester = self.get_tester()
 
         @contextlib.contextmanager
@@ -131,6 +157,18 @@ class IRCTestCase(AsyncTestCase):
         self.server.stop()
         super(IRCTestCase, self).tearDown()
         self.teardown()
+
+    # Decorator to set the expected communication of a client
+    @classmethod
+    def exchange(cls, expected):
+        def outer(func):
+            @functools.wraps(func)
+            def inner(self, *a, **kw):
+                self._exchange = expected
+                func(self, *a, **kw)
+                assert not self._exchange
+            return inner
+        return outer
 
 def make_suite(cls):
     '''Makes a suite from all test functions in a TestCase class'''

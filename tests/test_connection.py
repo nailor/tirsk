@@ -5,13 +5,7 @@ from tirsk.tirsk import IRCStream
 
 
 class ConnectionTest(IRCTestCase):
-    def get_tester(self):
-        def connection_tester(data):
-            self.eq(data, 'NICK mybot\r\n')
-            self.stop()
-            return ('OK', True)
-        return connection_tester
-
+    @IRCTestCase.exchange((('NICK mybot', 'OK'),))
     def test_simple_connection(self):
         def do_test():
             stream.connect(connection_done)
