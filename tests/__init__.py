@@ -111,7 +111,7 @@ class IRCTestCase(AsyncTestCase):
         #
         # Usage is somewhat like this, note that CR-LF should be omitted:
         #
-        # @exchange(('NICK bot', 'OK), ('OTHERCMD', 'REPLY'))
+        # @exchange(('NICK bot', 'OK'), ('OTHERCMD', 'REPLY'))
         # def test_something(self):
         #     do_some_testing()
         #
@@ -160,11 +160,11 @@ class IRCTestCase(AsyncTestCase):
 
     # Decorator to set the expected communication of a client
     @classmethod
-    def exchange(cls, expected):
+    def exchange(cls, *exchange):
         def outer(func):
             @functools.wraps(func)
             def inner(self, *a, **kw):
-                self._exchange = expected
+                self._exchange = exchange
                 func(self, *a, **kw)
                 assert not self._exchange
             return inner
